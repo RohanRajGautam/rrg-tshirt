@@ -19,7 +19,7 @@ const CameraRig = ({ children }) => {
 			if (isBreakpoint) targetPostion = [0, 0, 2]
 			if (isMobile) targetPostion = [0, 0.2, 2.5]
 		} else {
-			if (isMobile) targetPostion = [0, 0.5, 2.5]
+			if (isMobile) targetPostion = [0, 0, 2.5]
 			else targetPostion = [0, 0, 2]
 		}
 
