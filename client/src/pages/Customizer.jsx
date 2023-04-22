@@ -6,7 +6,7 @@ import config from '../config/config'
 import state from '../store'
 import { download } from '../assets'
 import { downloadCanvasToImage, reader } from '../config/helpers'
-import { EditorTabs, DecalTypes, FilterTabs } from '../config/constants'
+import { EditorTabs, FilterTabs, DecalTypes } from '../config/constants'
 import { fadeAnimation, slideAnimation } from '../config/motion'
 import {
 	AiPicker,
@@ -20,13 +20,15 @@ const Customizer = () => {
 	const snap = useSnapshot(state)
 
 	const [file, setFile] = useState('')
-	const [props, setProps] = useState('')
+
+	const [prompt, setPrompt] = useState('')
+	const [generatingImg, setGeneratingImg] = useState(false)
+
 	const [activeEditorTab, setActiveEditorTab] = useState('')
 	const [activeFilterTab, setActiveFilterTab] = useState({
 		logoShirt: true,
 		stylishShirt: false,
 	})
-	const [generatingImage, setGeneratingImage] = useState(false)
 
 	// show tab content depending on the activeTab
 	const generateTabContent = () => {
@@ -36,10 +38,45 @@ const Customizer = () => {
 			case 'filepicker':
 				return <FilePicker file={file} setFile={setFile} readFile={readFile} />
 			case 'aipicker':
-				return <AiPicker />
-
+				return (
+					<AiPicker
+						prompt={prompt}
+						setPrompt={setPrompt}
+						generatingImg={generatingImg}
+						handleSubmit={handleSubmit}
+					/>
+				)
 			default:
 				return null
+		}
+	}
+
+	const handleSubmit = async (type) => {
+		if (!prompt) return alert('Please enter a prompt')
+
+		try {
+			setGeneratingImg(true)
+
+			const response = await fetch('http://localhost:8080/api/v1/dalle', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					prompt,
+				}),
+			})
+
+			const data = await response.json()
+
+			console.log(data, 'data')
+
+			handleDecals(type, `data:image/png;base64,${data.photo}`)
+		} catch (error) {
+			alert(error)
+		} finally {
+			setGeneratingImg(false)
+			setActiveEditorTab('')
 		}
 	}
 
@@ -49,7 +86,7 @@ const Customizer = () => {
 		state[decalType.stateProperty] = result
 
 		if (!activeFilterTab[decalType.filterTab]) {
-			handleActiveFilterTab[decalType.filterTab]
+			handleActiveFilterTab(decalType.filterTab)
 		}
 	}
 
@@ -67,7 +104,8 @@ const Customizer = () => {
 				break
 		}
 
-		// after setting the state, set the activeFilterTab
+		// after setting the state, activeFilterTab is updated
+
 		setActiveFilterTab((prevState) => {
 			return {
 				...prevState,
@@ -94,7 +132,7 @@ const Customizer = () => {
 					>
 						<div className='flex items-center min-h-screen'>
 							<div className='editortabs-container tabs'>
-								{EditorTabs.map((tab, i) => (
+								{EditorTabs.map((tab) => (
 									<Tab
 										key={tab.name}
 										tab={tab}
@@ -115,7 +153,7 @@ const Customizer = () => {
 							type='filled'
 							title='Go Back'
 							handleClick={() => (state.intro = true)}
-							customStyles={`w-fit px-4 py-2.5 font-bold text-sm`}
+							customStyles='w-fit px-4 py-2.5 font-bold text-sm'
 						/>
 					</motion.div>
 
@@ -123,7 +161,7 @@ const Customizer = () => {
 						className='filtertabs-container'
 						{...slideAnimation('up')}
 					>
-						{FilterTabs.map((tab, i) => (
+						{FilterTabs.map((tab) => (
 							<Tab
 								key={tab.name}
 								tab={tab}
